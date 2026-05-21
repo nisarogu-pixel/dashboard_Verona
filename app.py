@@ -289,7 +289,6 @@ with tab1:
                 marker_color=color,
                 line_color=color,
                 boxmean=True,
-                fillcolor=color.replace(")", ", 0.2)").replace("rgb", "rgba") if "rgb" in color else color + "33",
                 hovertemplate="<b>%{y}s</b><extra></extra>"
             ))
             fig2.add_hline(y=avg_val, line_dash="dot", line_color=COLORS["warning"],
