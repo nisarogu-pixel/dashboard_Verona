@@ -252,7 +252,8 @@ with tab1:
         col_a, col_b = st.columns([2, 1])
 
         with col_a:
-            labels = df["_actividad"].fillna(df.index.map(lambda x: f"J{x+1}")).astype(str)
+            fallback = pd.Series([f"J{i+1}" for i in range(len(df))], index=df.index)
+            labels = df["_actividad"].where(df["_actividad"].notna(), fallback).astype(str)
             fig = go.Figure()
             avg_val = df["_segundos"].mean()
             fig.add_trace(go.Bar(
