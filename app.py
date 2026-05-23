@@ -240,7 +240,7 @@ for i, proc in enumerate(selected):
         """, unsafe_allow_html=True)
 
 # ─── TABS ────────────────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4 = st.tabs(["⏱️ Tiempos", "🔴 Mudas", "👷 Operarios", "📋 Datos"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["⏱️ Tiempos", "🔴 Mudas", "👷 Operarios", "📋 Datos", "🤖 Resumen IA"])
 
 # ── TAB 1: TIEMPOS ───────────────────────────────────────────────────────────────
 with tab1:
@@ -451,6 +451,75 @@ with tab4:
         file_name="Reporte_Carnes_Verona.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+# ── TAB 5: RESUMEN IA ────────────────────────────────────────────────────────────
+with tab5:
+    st.markdown('<div class="section-title">🤖 Resumen Ejecutivo generado por IA</div>', unsafe_allow_html=True)
+    st.markdown("Genera un análisis automático de los datos de producción con recomendaciones para tu jefe.")
+
+    def build_prompt(sheets, selected):
+        resumen = []
+        for proc in selected:
+            df = sheets[proc].dropna(subset=["_segundos"])
+            avg = df["_segundos"].mean()
+            mn  = df["_segundos"].min()
+            mx  = df["_segundos"].max()
+            std = df["_segundos"].std()
+            op  = df["_operario"].iloc[0]
+            mudas = df[df["_muda"] != "Sin muda"]["_muda"].value_counts().to_dict()
+            resumen.append(
+                f"- {proc} (Operario: {op}): promedio={avg:.0f}s, min={mn:.0f}s, "
+                f"max={mx:.0f}s, desv={std:.0f}s, registros={len(df)}, mudas={mudas}"
+            )
+        datos = "\n".join(resumen)
+        return f"""Eres un experto en ingeniería industrial y estudio de tiempos.
+Analiza los siguientes datos de producción de una planta de embutidos llamada Carnes Verona, ubicada en Colombia.
+
+DATOS DE PRODUCCIÓN:
+{datos}
+
+Genera un informe ejecutivo en español con:
+1. **Resumen general** de la situación productiva (2-3 oraciones)
+2. **Hallazgos por proceso** — identifica cuál proceso tiene mayor variabilidad y por qué es crítico
+3. **Análisis de mudas** — qué desperdicios Lean se detectaron y su impacto
+4. **Top 3 recomendaciones** concretas y accionables para mejorar la productividad
+5. **Conclusión** de una sola oración para el jefe
+
+Sé directo, profesional y usa lenguaje ejecutivo. Máximo 400 palabras."""
+
+    def llamar_gemini(prompt):
+        import urllib.request, json
+        api_key = st.secrets["GEMINI_API_KEY"]
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+        payload = json.dumps({
+            "contents": [{"parts": [{"text": prompt}]}]
+        }).encode("utf-8")
+        req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+        return result["candidates"][0]["content"]["parts"][0]["text"]
+
+    if st.button("🚀 Generar Resumen Ejecutivo con IA", type="primary"):
+        with st.spinner("Analizando datos con IA..."):
+            try:
+                prompt = build_prompt(sheets, selected)
+                resumen_ia = llamar_gemini(prompt)
+                st.markdown("""
+                <div style='background:linear-gradient(135deg,#1e2130,#252840);
+                            border:1px solid #2e3250; border-radius:12px;
+                            padding:28px; margin-top:16px;'>
+                """, unsafe_allow_html=True)
+                st.markdown(resumen_ia)
+                st.markdown("</div>", unsafe_allow_html=True)
+                st.download_button(
+                    label="⬇️ Descargar resumen como .txt",
+                    data=resumen_ia,
+                    file_name="Resumen_Ejecutivo_Carnes_Verona.txt",
+                    mime="text/plain"
+                )
+            except Exception as e:
+                st.error(f"Error al conectar con Gemini: {e}")
+                st.info("Verifica que la API key esté bien guardada en Streamlit Secrets.")
 
 # ─── FOOTER ──────────────────────────────────────────────────────────────────────
 st.divider()
