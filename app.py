@@ -490,7 +490,7 @@ Sé directo, profesional y usa lenguaje ejecutivo. Máximo 400 palabras."""
     def llamar_gemini(prompt):
         import urllib.request, json
         api_key = st.secrets["GEMINI_API_KEY"]
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
         payload = json.dumps({
             "contents": [{"parts": [{"text": prompt}]}]
         }).encode("utf-8")
